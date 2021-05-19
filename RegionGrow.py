@@ -1,50 +1,38 @@
 import numpy as np
 
+def RegionGrow(image: np.ndarray, seed: tuple, threshold: float, max_val: float, connectivity: bool = True):
+    '''区域生长算法
 
-class Point(object):
-    def __init__(self, x, y):
-        self.x = x
-        self.y = y
-
-    def getX(self):
-        return self.x
-
-    def getY(self):
-        return self.y
-
-
-def regionGrow(image: np.ndarray, seed: Point, threshold: float = 0.5, label: int = 1, connectivity=True):
-    '''
-    image:输入图片,(Height,Width)的numpy数组
-    seed:种子点
-    threshold:判断生长的阈值
-    label:生长区域的标签
-    connectivity:连通方式,
-        True:8连通
-        False:4连通
+    args:
+        image:输入图片,(Height,Width)的numpy数组
+        seed:种子点
+        threshold:判断生长的阈值
+        max_val:目标区域的最大灰度
+        connectivity:连通方式,
+            True:8连通
+            False:4连通
     '''
     if connectivity:
-        connects = [Point(-1, -1), Point(0, -1), Point(1, -1), Point(1, 0), Point(1, 1),
-                    Point(0, 1), Point(-1, 1), Point(-1, 0)]
+        connects = [[-1, 1], [0, -1], [1, -1],
+                    [1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0]]
     else:
-        connects = [Point(0, -1),  Point(1, 0), Point(0, 1), Point(-1, 0)]
+        connects = [[0, -1], [1, 0], [0, 1], [-1, 0]]
 
     height, width = image.shape
     result = np.zeros(image.shape)
-    seedList = [] #存储种子点的堆栈
-    seedList.append(seed)
-    while(len(seedList) > 0):
+    seedList = [seed] # 存储种子点的堆栈
+    while(seedList):
         currentPoint = seedList.pop(0) # 当前种子点出栈
-        result[currentPoint.x, currentPoint.y] = label
+        result[currentPoint[1], currentPoint[0]] = 1
         for i in range(len(connects)):
-            tempX = currentPoint.x + connects[i].x
-            tempY = currentPoint.y + connects[i].y
-            if tempX < 0 or tempY < 0 or tempX >= height or tempY >= width:
+            new_x = currentPoint[0]+connects[i][0]
+            new_y = currentPoint[1]+connects[i][1]
+            if new_x < 0 or new_y < 0 or new_x >= width or new_y >= height:
                 continue
             # 计算种子点与领域点的灰度差
-            diff = abs(image[currentPoint.x, currentPoint.y] - image[tempX, tempY])
-            # 生长条件:种子点与领域点的差小于阈值,且领域点未被标记
-            if diff < threshold and result[tempX, tempY] == 0:
-                result[tempX, tempY] = label
-                seedList.append(Point(tempX,tempY)) #将领域点作为新的生长种子点,入栈
+            diff = abs(image[new_y,new_x]-image[currentPoint[1],currentPoint[0]])
+            # 生长条件:种子点与领域点的差小于阈值,且领域点未被标记,且当前点的灰度值小于目标区域的最大灰度值
+            if diff<threshold and result[new_y,new_x]==0 and image[new_y,new_x]<=max_val:
+                result[new_y,new_x] = 1
+                seedList.append((new_x,new_y))
     return result
